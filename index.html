@@ -1,1 +1,83 @@
-Self-Supervised Learning of Action Affordances as Interaction Modes
+<head>
+    <title>ActAIM</title>
+    <link  rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="header">
+        <h1>
+            Self-Supervised Learning of Action Affordances as Interaction Modes
+        </h1>
+        <h2>
+            Liquan Wang, Nikita Dvornik, Rafael Dubeau, Mayank Mittal, Animesh Garg
+        </h2>
+        <hr />
+    </div>
+
+    <h3>Abstract</h3>
+    <p>
+When humans perform a task with an articulated
+object, they interact with the object only in a handful of ways,
+while the space of all possible interactions is nearly endless. This
+is because humans have prior knowledge about what interactions
+are likely to be successful, i.e., to open a new door we first
+try the handle. While learning such priors without supervision
+is easy for humans, it is notoriously hard for machines. In
+this work, we tackle unsupervised learning of priors of useful
+interactions with articulated objects, that we call interaction
+modes. In contrast to the prior art, we use no supervision or
+privileged information; we only assume access to the depth
+sensor in the simulator to learn the interaction modes. More
+precisely, we define a successful interaction as the one changing
+the visual environment substantially, and learn a generative
+model of such interactions, that can be conditioned on the desired
+goal state of the object. In our experiments, we show that our
+model covers most of the human interaction modes, outperforms
+existing state-of-the-art methods for affordance learning, and can
+generalize to objects never seen during training. Additionally,
+we show promising results in the goal-conditional setup, where
+our model can be quickly fine-tuned to perform a given task.
+We show in the experiments that such affordance learning
+predicts interaction which covers most modes of interaction
+for the querying articulated object and can be fine-tuned to a
+goal-conditional model.
+    </p>
+
+    <h3>Video</h3>
+    <video controls>
+        <source src="./assets/icra_final.mp4" type="video/mp4" />
+    </video>
+
+    <h3>Pipeline</h3>
+    <img src="./assets/pipeline-v6.png" />
+
+
+    <h3>Demonstrations</h3>
+    <div class="video-grid">
+        <div>
+            <video controls>
+                <source src="./assets/window.mp4" type="video/mp4" />
+            </video>
+        </div>
+        <div>
+            <video controls>
+                <source src="./assets/door.mp4" type="video/mp4" />
+            </video>
+        </div>
+        <div>
+            <video controls>
+                <source src="./assets/multi_drawer_20.mp4" type="video/mp4" />
+            </video>
+        </div>
+        <div>
+            <video controls>
+                <source src="./assets/shelf.mp4" type="video/mp4" />
+            </video>
+        </div>
+        <div>
+            <video controls>
+                <source src="./assets/one_drawer.mp4" type="video/mp4" />
+            </video>
+        </div>
+    </div>
+    
+</body>
