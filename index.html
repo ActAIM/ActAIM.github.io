@@ -1,6 +1,14 @@
 <head>
     <title>ActAIM</title>
     <link  rel="stylesheet" href="style.css">
+    <script type="text/javascript" async
+      src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-MML-AM_CHTML">
+    </script>
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({
+        tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+      });
+      </script>
 </head>
 <body>
     <div class="header">
@@ -42,13 +50,159 @@ for the querying articulated object and can be fine-tuned to a
 goal-conditional model.
     </p>
 
-    <h3>Video</h3>
     <video controls>
-        <source src="./assets/icra_final.mp4" type="video/mp4" />
+        <source src="assets/icra_final.mp4" type="video/mp4" />
     </video>
 
-    <h3>Pipeline</h3>
-    <img src="./assets/pipeline-v6.png" />
+    <h3>General Introduction</h3>
+    <p>
+      Humans are capable of performing several different meaningful tasks with articulated objects such as opening or closing a drawer or turning a switch on or off. This is because humans have prior knowledge about what interactions are likely to be successful. Such prior knowledge is notoriously hard to learn for machines without supervision. 
+    </p>
+    <p>
+      Our ICRA'2023 paper, Self-Supervised Learning of <b>Act</b>ion <b>A</b>ffordances as <b>I</b>nteraction <b>M</b>odes (ActAIM) tackles this problem by using unsupervised learning of priors of useful interactions with articulated objects that we call interaction modes.
+    </p>
+    <p>
+    Contributions:
+      <ol>
+        <li>
+          ActAIM uses a novel model architecture (CVAE+ConvONet) to learn action affordances of articulated objects using purely visual data without using any privileged ground-truth information or explicit supervision. 
+        </li>
+        <li>
+          For training, we propose a new clustering-based data collection strategy that increases the diversity of the collected data.
+        </li>
+        <li>
+          We experimentally show that ActAIM generates actions that cover a variety of interaction modes and leads to successful goal completion even on previously unseen objects.
+        </li>
+      </ol>
+    </p>
+    <img src="assets/modes_graphic.png" />
+
+    <h3>Problem Description:</h3>
+    <p>
+      Given an image of an unseen articulated object, how can we determine the ways in which an agent can meaningfully interact with it?
+    </p>
+    <p>
+      To answer this, we introduce the notion of an <b>Interaction Mode</b>. For a given object, an interaction mode describes a distinct way in which the object can be meaningfully manipulated. For instance, a storage cabinet which has 2 drawers and 2 cabinet doors, each of which can be opened or closed, gives a total of 8 distinct interaction modes.
+    </p>
+    <p>
+      We can now restate our original question as
+      <ol>
+        <li>
+          Based on the given observation, can we determine the interaction modes of the object?
+        </li>
+        <li>
+          How do we perform an action which leads to the specific interaction mode?
+        </li>
+      </ol>
+    </p>
+    <p>
+      We propose a novel model architecture that learns to predict interaction modes of articulated objects and can generate actions that lead to a given interaction mode. Without the use of any privileged ground-truth information or explicit supervision, our model learns distinct interaction modes that can generalize to new unseen objects.
+    </p>
+    <p>
+      Our model can be separated into two main modules: 
+      <ol>
+        <li>
+          The <b>mode selector</b> models the possible interaction modes of an object given an observation.
+        </li>
+        <li>
+          The <b>action predictor</b> models the actions that would lead to the change associated with a given interaction mode.
+        </li>
+      </ol>
+    </p>
+    <p>
+      This can be understood as the following decomposition:
+      $$\mathbb{P}(a|o) = \underbrace{\mathbb{P}(a|o,z)}_{\text{action predictor}}~ \underbrace{\mathbb{P}(z|o)}_{\text{mode selector}}$$
+      Where $o$ is the observation, $z$ is an interaction mode and $a$ is the predicted action.
+    </p>
+    <img src="assets/target_modes.png" />
+    
+    <h3>Method - Adaptive Data Collection</h3>
+    <p>
+      In order to train the model, we first need to collect a large number of interactions. Naively, this can be achieved by randomly sampling actions, executing these actions, and saving the subsequent interactions. The problem with this approach is that some modes of interaction are much more likely to occur than others. For example, an interaction that opens a door is much less likely than an interaction that closes a door. This is because opening a door requires the agent to grasp a handle (which is typically quite small) and pull. Meanwhile, closing a door can be achieved by pushing on almost any point on the door. Therefore, collecting interactions through random actions will lead to an imbalance of interaction modes in the dataset.
+    </p>
+    <p>
+      To solve this, we introduce our novel <b>Adaptive Data Collection</b> algorithm.
+    </p>
+    <p>
+      Given an object to collect interactions from, we begin by sampling interactions from random actions. Once a reasonable number of interactions have been sampled, we encode each interaction in the following way:
+    </p>
+    <img src="assets/encoding.png" />
+    <p>
+      We can then cluster the interactions using a Gaussian Mixture Model. The resulting clusters correspond to the distinct interaction modes encountered during the previous stage of data collection, and from these Gaussian clusters, we can sample new actions that correspond to specific interaction modes. Data collection then continues by sampling interactions both from these clusters as well as from random actions. 
+    </p>
+    <p>
+      This data collection process is repeated for many different objects across many different object categories in order to generate a diverse dataset of interactions on articulated objects.
+    </p>
+    <img src="assets/Clusters.png" />
+
+    <h3>Model Architecture</h3>
+    <p>
+      The model architecture can be split into 3 parts.
+    </p>
+    <h4>Mode Selector $\mathbb{P}(z|o)$</h4>
+    <p>
+      We model the mode selector $\mathbb{P}(z|o)$ with a Conditional Variational Autoencoder (CVAE). We train this CVAE structure together with the further model and optimize it with the regularization loss and reconstruction loss.
+    </p>
+    <h4>Implicit Neural Geometry Encoder $\Theta$</h4>
+    <p>
+      We use an implicit neural geometry encoder that encodes local geometry features to improve the generalizability of the model over different categories of articulated objects. Such implicit representation is a continuous function with a neural network as the input. We extract the point-specific feature $v_p$ given the querying point $p$.
+    </p>
+    <h4>Action Predictor $\mathbb{P}(a|z,o)$</h4>
+    <p>
+      To simplify the problem, we define the action primitives  which are interaction point, gripper rotation, and gripper moving direction. Therefore, we can re-define the action predictor as
+    </p>
+    <p>
+      $\mathbb{P}(a|z, o)$ contains 3 different models which are Mode-conditional score function $Q(a|o, z)$, Mode-conditional point score function $Q_p(p|o, z)$, and Point-conditional action predictor $\pi_p (R, F|p, o, z)$. 
+    </p>
+    <p>
+      We treat $Q(a|v_p, z)$ as a scoring function which estimates the probability of successfully realizing the interaction mode $z$ when taking action given the local geometry feature $v_p$.
+    </p>
+    <p>
+      $Q_p (p|v_p, z)$ estimates the likelihood that interacting with the point $p$ will lead to the interaction mode $z$ given the local geometry feature $v_p$. During inference, this module is used to select the interaction point with the highest likelihood of success.
+    </p>
+    <p>
+      Given the interaction point $p$ sampled from the $Q_p(p|v_p, z)$, $\pi_p(R,F|p,o,z)$ predicts the rotation and moving direction for the given interaction mode $z$ together with the local implicit geometry feature.
+    </p>
+
+    <h3>Experiments</h3>
+    <h4>Experimental Setup</h4>
+    <p>
+      We use articulated objects from the SAPIEN dataset. We first train our model on objects from nine categories (faucet, table, storage furniture, door, window, refrigerator, box, trashbin, and safe), and then evaluate the model performance on 3 extra categories (kitchen pot, kettle, and switch). For each category, we use 8 object instances with 4 different initial states for training and testing.
+    </p>
+    <h4>Evaluation Metrics</h4>
+    <p>
+      To evaluate the multi-modal interaction modes, we use the following metrics to evaluate the prior distribution $P(a|o)$:
+      <ul>
+        <li>
+          <i>sample-success-rate ($ssr$)</i> - measures the fraction of proposed interaction trials which are successful
+          $$ssr = \frac{\text{# successful proposed interaction}}{\text{# total proposed interaction}}$$
+        </li>
+        <li>
+          <i>weighted modes ratio</i> ($\eta$) measures the success rate weighted by the fraction of the interaction modes discovered
+          $$\eta = ssr \times \frac{\text{# successful discovered modes}}{\text{# total ground-truth modes}}$$
+        </li>
+        <li>
+          <i>weighted normalized entropy</i> ($\bar{\mathcal{H}}$) - measures the success rate weighted by the entropy of the distribution
+          $$\bar{\mathcal{H}} =  ssr \times \frac{\mathcal{H}(\mathcal{M})}{\mathcal{H}_{max}},$$
+        </li>
+      </ul>
+    </p>
+    <h4>Baselines and Comparisons</h4>
+    <p>We compare our approach to the following baselines:
+      <ol>
+        <li>
+          <b>Random policy</b>: uniformly samples interaction points from the articulated object's point cloud, orientation and moving direction.
+        </li>
+        <li>
+          <b><a href="https://cs.stanford.edu/~kaichun/where2act/" target="_blank">Where2Act</a></b>: computes priors per discretized action primitive. Since it evaluates interaction modes depending on separate primitives, we aggregrate the push and pull interactions and compute the average from these modes.
+        </li>
+        <li>
+          <b>ActAIM-PN++</b>: is a version of ActAIM that computes point features $v_{\textbf{p}}$ using PointNet++ instead of ConvONet.
+        </li>
+      </ol>
+    </p>
+    <img class="table" src="assets/ResultsTable.png" />
+
 
 
     <h3>Demonstrations</h3>
